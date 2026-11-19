@@ -4,6 +4,14 @@
 
 Previously named RIDA Research Roots. The Python package and CLI command remain `research_roots` for compatibility.
 
+## License and AI assistance
+
+The project's code and documentation are available under the [MIT License](LICENSE), permitting reuse, modification, distribution, and commercial use with the license notice retained.
+
+The initial implementation and subsequent changes were substantially generated with OpenAI Codex, following human-provided requirements and feedback. Codex-created commits are attributed to `Codex <codex@openai.com>` to make that provenance visible; this attribution does not identify Codex or OpenAI as the copyright holder. AI assistance is not a guarantee of correctness or scientific validity. Review the evidence and source coverage before using results in research.
+
+The license grants any rights held by the project's contributors; it does not assert that purely AI-generated material is copyrightable. Dependencies retain their own licenses. Publication metadata, abstracts, and other retrieved content remain subject to their source terms and any applicable third-party rights; this software license does not relicense them.
+
 ## New in v0.3
 
 - Citing studies are retrieved from **OpenAlex, Europe PMC and PubMed**, with up to 500 records per source. OpenAlex and Europe PMC are paginated; PubMed uses `pubmed_pubmed_citedin` plus batched summaries.
