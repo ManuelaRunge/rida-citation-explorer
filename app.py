@@ -6,8 +6,8 @@ from research_roots.exports import bundle, csv_bytes
 from research_roots.citations import citing_rows
 from research_roots.visualization import figure
 
-st.set_page_config(page_title='RIDA Research Roots', page_icon='🌱', layout='wide')
-st.title('RIDA Research Roots')
+st.set_page_config(page_title='RIDA Citation Explorer', page_icon='🌱', layout='wide')
+st.title('RIDA Citation Explorer')
 st.caption('Explore publication chronology and traceable citation relationships.')
 if 'sources' not in st.session_state:
     st.session_state.sources = Sources(Client())
@@ -89,5 +89,5 @@ with evidence:
     st.write('Direct citation evidence')
     st.json(view['edges'])
 with exports:
-    st.download_button('Download filtered exploration (ZIP)', bundle(view, fig.to_html(include_plotlyjs=True)), 'research-roots.zip', 'application/zip')
+    st.download_button('Download filtered exploration (ZIP)', bundle(view, fig.to_html(include_plotlyjs=True)), 'rida-citation-explorer.zip', 'application/zip')
     st.caption('Includes nodes, edges and publication CSVs, lineage JSON, manifest, Markdown summary and standalone interactive HTML. Source metadata and retrieval timestamps are preserved in JSON.')

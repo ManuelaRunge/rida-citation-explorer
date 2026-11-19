@@ -24,7 +24,7 @@ def csv_bytes(rows, fields):
 
 def export_files(result):
     dump = lambda value: json.dumps(value, indent=2, ensure_ascii=False).encode('utf-8')
-    summary = (f"# Research Roots exploration\n\nSeed: {result['manifest']['seed']}\n\n"
+    summary = (f"# RIDA Citation Explorer exploration\n\nSeed: {result['manifest']['seed']}\n\n"
                f"Publications: {len(result['nodes'])}; citation edges: {len(result['edges'])}.\n\n"
                "Edges point from citing to cited publications. Citation paths are not proof of intellectual influence. "
                "Completeness is unknown. Network indicators describe the retrieved subset only.\n\n"

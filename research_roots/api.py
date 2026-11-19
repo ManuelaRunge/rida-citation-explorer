@@ -33,7 +33,7 @@ class Client:
         cached = self.cache.get(url)
         if cached and time.monotonic() - cached[0] < self.ttl:
             return copy.deepcopy(cached[1])
-        headers = {'User-Agent': 'RIDA-Research-Roots/0.2', 'Accept': 'application/json'}
+        headers = {'User-Agent': 'RIDA-Citation-Explorer/0.3', 'Accept': 'application/json'}
         key = os.environ.get('OPENALEX_API_KEY')
         if url.startswith('https://api.openalex.org/') and key:
             headers['Authorization'] = 'Bearer ' + key

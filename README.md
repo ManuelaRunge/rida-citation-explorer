@@ -1,6 +1,8 @@
-# RIDA Research Roots v0.3
+# RIDA Citation Explorer v0.3
 
-[Open the hosted app](https://rida-research-roots.streamlit.app/)
+[Open the hosted app](https://rida-citation-explorer.streamlit.app/)
+
+Previously named RIDA Research Roots. The Python package and CLI command remain `research_roots` for compatibility.
 
 ## New in v0.3
 
