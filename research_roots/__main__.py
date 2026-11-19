@@ -9,8 +9,8 @@ def main():
     parser = argparse.ArgumentParser(description='Retrieve a bounded, evidence-traceable citation lineage.')
     parser.add_argument('identifier')
     parser.add_argument('--depth', type=int, default=2)
-    parser.add_argument('--max-nodes', type=int, default=80)
-    parser.add_argument('--citing-limit', type=int, default=20)
+    parser.add_argument('--max-nodes', type=int, default=200)
+    parser.add_argument('--citing-limit', type=int, default=100, help='Maximum citing records per source (0–500)')
     parser.add_argument('--output', type=Path, default=Path('output'))
     args = parser.parse_args()
     try:

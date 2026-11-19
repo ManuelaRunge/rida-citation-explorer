@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import zipfile
+from .citations import citing_rows
 
 
 def csv_bytes(rows, fields):
@@ -30,6 +31,7 @@ def export_files(result):
                f"Retrieval issues: {len(result['issues'])}. See lineage.json for evidence and manifest.json for settings.\n")
     node_fields = ['id', 'identifiers', 'title', 'authors', 'year', 'date', 'journal', 'type', 'abstract', 'counts', 'analysis', 'provenance', 'conflicts']
     return {'lineage.json': dump(result), 'manifest.json': dump(result['manifest']),
+            'citing-studies.csv': csv_bytes(citing_rows(result), ['id', 'year', 'title', 'authors', 'sources', 'author_match', 'doi', 'pmid', 'url']),
             'nodes.csv': csv_bytes(result['nodes'], node_fields),
             'publications.csv': csv_bytes(result['nodes'], node_fields[:10] + ['counts', 'provenance']),
             'edges.csv': csv_bytes(result['edges'], ['citing', 'cited', 'relationship', 'evidence', 'provenance']),

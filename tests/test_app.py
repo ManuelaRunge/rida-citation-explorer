@@ -16,7 +16,9 @@ class AppTests(unittest.TestCase):
         with patch('research_roots.pipeline.build', return_value=graph):
             app.button[0].click().run()
         self.assertEqual(len(app.exception), 0)
-        self.assertEqual(len(app.tabs), 5)
+        self.assertEqual(len(app.tabs), 6)
+        app.radio[0].set_value('First / last author').run()
+        self.assertEqual(len(app.exception), 0)
         app.selectbox[0].select('references').run()
         self.assertEqual(len(app.exception), 0)
         self.assertTrue(app.get('download_button'))

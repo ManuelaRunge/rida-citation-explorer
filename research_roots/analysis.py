@@ -1,5 +1,35 @@
 from collections import deque
 from copy import deepcopy
+import re
+import unicodedata
+
+
+def author_key(name):
+    """Conservative surname/first-initial hint; never a verified person/group ID."""
+    text = ''.join(c for c in unicodedata.normalize('NFKD', name) if not unicodedata.combining(c))
+    parts = re.findall(r'[A-Za-z]+', text)
+    if len(parts) < 2:
+        return None
+    if len(parts[-1]) <= 3 and parts[-1].isupper():
+        return (''.join(parts[:-1]).casefold(), parts[-1][0].casefold())
+    return (parts[-1].casefold(), parts[0][0].casefold())
+
+
+def author_group(seed, node):
+    if node['id'] == seed['id']:
+        return 'Seed'
+    a, b = seed.get('authors') or [], node.get('authors') or []
+    if not a or not b:
+        return 'Unknown authors'
+    endpoints = {author_key(b[0]), author_key(b[-1])} - {None}
+    first, last = author_key(a[0]), author_key(a[-1])
+    if first in endpoints and last in endpoints and first != last:
+        return 'Both seed authors'
+    if first and first in endpoints:
+        return 'Seed first author'
+    if last and last in endpoints:
+        return 'Seed last author'
+    return 'No match'
 
 
 def distances(start, adjacency):
@@ -22,10 +52,12 @@ def annotate(result):
     ancestry = distances(seed, outgoing)
     citing = distances(seed, incoming)
     branches = [distances(child, outgoing) for child in outgoing.get(seed, [])]
+    seed_node = next(n for n in result['nodes'] if n['id'] == seed)
     for node in result['nodes']:
         identifier = node['id']
         shared = sum(identifier in branch for branch in branches)
         node['analysis'] = {
+            'author_group': author_group(seed_node, node),
             'reference_depth': ancestry.get(identifier), 'citing_depth': citing.get(identifier),
             'role': 'seed' if identifier == seed else 'reference' if identifier in ancestry else 'citing',
             'reachable_citing_works': len(distances(identifier, incoming)) - 1,

@@ -1,4 +1,23 @@
-# RIDA Research Roots v0.2
+# RIDA Research Roots v0.3
+
+[Open the hosted app](https://rida-research-roots.streamlit.app/)
+
+## New in v0.3
+
+- Citing studies are retrieved from **OpenAlex, Europe PMC and PubMed**, with up to 500 records per source. OpenAlex and Europe PMC are paginated; PubMed uses `pubmed_pubmed_citedin` plus batched summaries.
+- Citing publications are added before reference expansion so the reference tree cannot consume their entire node budget.
+- The **Citing studies** tab provides newest-year-first results, source labels, keyword and author-match filters, links, source coverage, and CSV download.
+- Select **Color nodes by → First / last author** on the timeline to highlight matches to the seed's first/last authors. Colors are surname/first-initial hints, not verified identities or confirmed research groups. Only first/last positions are compared; middle authors are excluded. The seed remains a gold diamond.
+
+## Find citing studies systematically
+
+1. Enter a DOI, PMID, or OpenAlex Work ID. For biomedical papers, a resolved PMID enables all three sources.
+2. Set **Citing publications per source** and **Maximum publications** high enough. Use reference depth zero if you only want forward citation discovery.
+3. Build the lineage, then open **Citing studies**. Clear graph filters to see the entire retrieved set. Search titles/authors/available abstracts with terms such as `vector`, `chemoprevention`, or `stratification`.
+4. Inspect **Source coverage** and **Evidence** for failures, partial pages, unresolved records or graph limits. A source returning all its indexed links is not proof of complete citation coverage.
+5. Export the JSON/manifest and CSV. On a later date, enable **Refresh source data** and compare exports by persistent identifiers. The app does not automatically schedule searches or label a paper's citation intent.
+
+PubMed is queried directly through [NCBI E-utilities](https://www.ncbi.nlm.nih.gov/books/NBK25501/), not merely through Europe PMC. Its [Cited by list](https://pubmed.ncbi.nlm.nih.gov/help/#cited-by) combines publisher and NCBI data and may be incomplete. PubMed and Europe PMC overlap; counts must not be summed and agreement is not independent confirmation. Preprints and published versions remain separate.
 
 A lightweight scientific citation-lineage explorer for individual researchers. Enter a DOI, PMID, or OpenAlex Work ID to trace references across up to two generations, inspect publications citing the seed, and explore publication chronology. Citation paths are bibliographic evidence, **not proof of intellectual influence**.
 
@@ -25,7 +44,8 @@ python -m research_roots 35300707 --depth 2 --max-nodes 80 --output output/examp
 ## Sources and configuration
 
 - [OpenAlex API](https://help.openalex.org/api/): publication resolution, source metadata, references and citing works.
-- [Europe PMC](https://europepmc.org/RestfulWebService): seed metadata enrichment and identifier cross-check. It is not currently a second citation-graph source.
+- [Europe PMC](https://europepmc.org/RestfulWebService): seed metadata enrichment and direct citing records.
+- [PubMed](https://pubmed.ncbi.nlm.nih.gov/): direct cited-by links and publication summaries. Requests are paced to under three per second within the application process; shared hosting IPs may still encounter rate limits.
 - Set `OPENALEX_API_KEY` in the environment if needed. Basic keyless requests are supported; a free key increases the quota. No paid API or LLM is required. See [OpenAlex authentication](https://help.openalex.org/api/authentication/).
 - Credentials never appear in exported URLs. Do not commit keys or `.env` files; `.env` is ignored but is not automatically loaded.
 - HTTP timeout: 20 seconds per attempt; up to three attempts with bounded backoff for transient errors and rate limits. Session cache: one hour, with original timestamps retained. Use the refresh checkbox to bypass it.
@@ -36,9 +56,9 @@ python -m research_roots 35300707 --depth 2 --max-nodes 80 --output output/examp
 - Source-specific counts, original source records, per-record and per-edge timestamps, identifier match methods, conflicting metadata and unresolved reference reports.
 - Chronological network, year/direction/depth/type filters, unknown-year handling, shared ancestry and transparent subset-based indicators.
 - CSV, JSON, Markdown, reproducibility manifest and standalone interactive HTML exports.
-- Identity is based on canonical OpenAlex IDs; Europe PMC metadata is merged only on an agreeing persistent identifier with no conflicting identifiers. Title similarity is never used to merge papers. Distinct OpenAlex records sharing a DOI are retained separately rather than guessed to be identical.
+- Citing-source reconciliation requires an agreeing persistent identifier, no conflicting identifiers, and exactly one matching candidate. Title similarity is never used to merge papers. Ambiguous matches are retained separately and reported. Reference expansion still uses canonical OpenAlex IDs; a source-only citing node can remain separate from a later resolved reference if no common ID was initially available.
 - Missing or partial citation coverage is unavoidable. Completeness is unknown. No graph links are invented from similarity, coupling or co-citation.
-- Reference selection uses provider order. Citing results use earliest publication date, up to 100 works; there is no exhaustive pagination. All indicators depend on these limits. Metadata can contain source errors or unusual chronology.
+- Reference selection uses provider order. OpenAlex citing results use newest publication date, Europe PMC uses provider order, and PubMed selects descending PMID (not necessarily publication date). Results are displayed by year after union. Each source is capped at 500 and the graph has independent limits. All indicators depend on these bounds. Metadata can contain source errors or unusual chronology.
 - A seed must resolve uniquely in OpenAlex. Europe PMC enriches the seed, but cannot currently substitute for a missing OpenAlex seed.
 - UI dependency versions are bounded by major version rather than fully locked. The manifest captures the application version and analysis settings; identical future API responses cannot be guaranteed. Archive the exported JSON to preserve the observed evidence.
 
@@ -59,4 +79,4 @@ python -m unittest discover -s tests -p test_live.py -v
 
 ## Planned work
 
-Europe PMC citation-edge reconciliation; publication selection for ambiguous search results; stronger retrieval snapshots and dependency locking; optional openly licensed citation-context retrieval. Citation-context classification is not implemented and will not be inferred from the graph.
+Publication selection for ambiguous search results; stronger retrieval snapshots and dependency locking; optional openly licensed citation-context retrieval; author identity matching by ORCID. Citation-context classification is not implemented and will not be inferred from the graph.

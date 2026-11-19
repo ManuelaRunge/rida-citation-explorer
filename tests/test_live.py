@@ -10,3 +10,5 @@ class LiveTests(unittest.TestCase):
         result = build('35300707', Settings(depth=1, max_nodes=5, references_per_work=2, citing_limit=1))
         self.assertTrue(result['nodes'][0]['title'])
         self.assertEqual(result['manifest']['seed_identifiers'].get('pmid'), '35300707')
+        self.assertEqual({r['source'] for r in result['manifest']['citation_retrieval']}, {'OpenAlex', 'Europe PMC', 'PubMed'})
+        self.assertTrue(all('error' not in r for r in result['manifest']['citation_retrieval']))

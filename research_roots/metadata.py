@@ -27,6 +27,8 @@ def normalize(raw, evidence):
 def reconcile(node, record, evidence):
     """Never silently merge conflicting persistent identifiers."""
     incoming = {}
+    if record.get('pmcid'):
+        incoming['pmcid'] = record['pmcid']
     if record.get('doi'):
         incoming['doi'] = parse_identifier(record['doi'])[1]
     if record.get('pmid'):

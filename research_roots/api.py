@@ -5,10 +5,14 @@ import os
 import time
 from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, quote
+from urllib.parse import urlencode
+from threading import Lock
 from urllib.request import Request, urlopen
 
 from .identifiers import parse_identifier
+
+_ncbi_lock = Lock()
+_ncbi_last_request = 0.0
 
 
 def now():
@@ -35,8 +39,15 @@ class Client:
             headers['Authorization'] = 'Bearer ' + key
         for attempt in range(self.attempts):
             try:
+                if url.startswith('https://eutils.ncbi.nlm.nih.gov/'):
+                    global _ncbi_last_request
+                    with _ncbi_lock:
+                        time.sleep(max(0, 0.4 - (time.monotonic() - _ncbi_last_request)))
+                        _ncbi_last_request = time.monotonic()
                 with urlopen(Request(url, headers=headers), timeout=self.timeout) as response:
                     result = (json.load(response), {'url': url, 'retrieved_at': now()})
+                if isinstance(result[0], dict) and ('error' in result[0] or 'ERROR' in result[0]):
+                    raise APIError('Source returned an API error from ' + url.split('?')[0])
                 self.cache[url] = (time.monotonic(), result)
                 return copy.deepcopy(result)
             except HTTPError as exc:
@@ -71,11 +82,71 @@ class Sources:
         return data, evidence
 
     def citations(self, work_id, limit):
-        data, evidence = self.client.get('https://api.openalex.org/works', {
-            'filter': 'cites:' + work_id.rsplit('/', 1)[-1], 'per_page': min(limit, 100),
-            'sort': 'publication_date:asc'})
-        evidence.update(source='OpenAlex', matching_method='openalex')
-        return data.get('results', []), evidence, data.get('meta', {}).get('count')
+        return self._citation_pages('OpenAlex', 'https://api.openalex.org/works',
+            {'filter': 'cites:' + work_id.rsplit('/', 1)[-1], 'sort': 'publication_date:desc'}, limit)
+
+    def europe_citations(self, pmid, limit):
+        return self._citation_pages('Europe PMC',
+            f'https://www.ebi.ac.uk/europepmc/webservices/rest/MED/{pmid}/citations', {'format': 'json'}, limit)
+
+    def _citation_pages(self, source, url, params, limit):
+        records, seen, pages, total = [], set(), [], None
+        report = {'source': source, 'pages': pages, 'selection': 'newest first' if source == 'OpenAlex' else 'provider order'}
+        if limit <= 0:
+            return records, report, total
+        size = min(limit, 100)
+        for page in range(1, (limit + size - 1) // size + 1):
+            try:
+                data, ev = self.client.get(url, {**params, 'page': page,
+                    'per_page' if source == 'OpenAlex' else 'pageSize': size})
+            except APIError as exc:
+                report['error'] = str(exc)
+                break
+            ev.update(source=source, matching_method='source citation endpoint')
+            pages.append(ev)
+            batch = data.get('results', []) if source == 'OpenAlex' else data.get('citationList', {}).get('citation', [])
+            total = data.get('meta', {}).get('count') if source == 'OpenAlex' else data.get('hitCount')
+            added = 0
+            for raw in batch:
+                key = (raw.get('source', source), str(raw.get('id')))
+                if key not in seen and len(records) < limit:
+                    seen.add(key)
+                    records.append({**raw, '_evidence': ev})
+                    added += 1
+            if not batch or (total is not None and page * size >= total):
+                break
+            if not added:
+                report['error'] = 'Pagination returned no new records; stopped.'
+                break
+        return records, report, total
+
+    def pubmed_citations(self, pmid, limit):
+        base = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/'
+        data, ev = self.client.get(base + 'elink.fcgi', {'dbfrom': 'pubmed', 'db': 'pubmed',
+            'id': pmid, 'linkname': 'pubmed_pubmed_citedin', 'retmode': 'json', 'tool': 'rida_research_roots'})
+        if 'linksets' not in data or any('error' in group for group in data['linksets']):
+            raise APIError('PubMed did not return a usable cited-by link response.')
+        ev.update(source='PubMed', matching_method='pubmed_pubmed_citedin')
+        ids = sorted({str(i) for group in data.get('linksets', []) for links in group.get('linksetdbs', [])
+                      if links.get('linkname') == 'pubmed_pubmed_citedin' for i in links.get('links', [])}, key=int, reverse=True)
+        report = {'source': 'PubMed', 'pages': [ev], 'selection': 'descending PMID (not publication date)'}
+        records = []
+        for start in range(0, min(limit, len(ids)), 100):
+            selected = ids[start:min(start + 100, limit)]
+            try:
+                summaries, metadata_ev = self.client.get(base + 'esummary.fcgi', {
+                    'db': 'pubmed', 'id': ','.join(selected), 'retmode': 'json', 'tool': 'rida_research_roots'})
+                metadata_ev.update(source='PubMed', matching_method='pmid')
+                values = summaries.get('result', {})
+                for uid in selected:
+                    if uid in values and 'error' not in values[uid]:
+                        records.append({**values[uid], '_evidence': ev, '_metadata_evidence': metadata_ev})
+                    else:
+                        report['error'] = 'Some linked PMIDs had no usable metadata.'
+            except APIError as exc:
+                report['error'] = str(exc)
+                break
+        return records, report, len(ids)
 
     def europe(self, kind, value):
         query = f'EXT_ID:{value} AND SRC:MED' if kind == 'pmid' else f'DOI:"{value}"'

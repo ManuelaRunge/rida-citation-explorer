@@ -106,7 +106,7 @@ class PipelineTests(unittest.TestCase):
         files = export_files(filtered)
         self.assertEqual(json.loads(files['lineage.json'])['nodes'], filtered['nodes'])
         with zipfile.ZipFile(io.BytesIO(bundle(filtered, '<html></html>'))) as archive:
-            self.assertEqual(len(archive.namelist()), 7)
+            self.assertEqual(len(archive.namelist()), 8)
 
     @patch('research_roots.api.time.sleep')
     @patch('research_roots.api.urlopen')
